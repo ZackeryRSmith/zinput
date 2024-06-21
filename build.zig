@@ -11,24 +11,37 @@ pub fn build(b: *std.Build) void {
     });
     module.link_libc = true;
 
-    if (target.result.os.tag == .windows) {
-        module.addSystemIncludePath(b.path("windows.h"));
-    } else if (target.result.os.tag == .macos) {
-        module.addSystemIncludePath(b.path("CoreGraphics/CoreGraphics.h"));
-    } else {
-        // NOTE: I'll likely need to ship both X11 and Wayland in this project.
-        //       A Linux binary must have both compiled in for it to work.
-        //       I shall look into using Mach Core's X11 and Wayland mirrors
-
-        // module.addSystemIncludePath("wayland-client.h");
-        module.addSystemIncludePath(b.path("xdo.h"));
-    }
-
     const tests = b.addTest(.{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
+    tests.linkLibC();
+
     const tests_step = b.step("test", "Run library tests");
     tests_step.dependOn(&tests.step);
+
+    // NOTE: We're allowed to do this because cross compiling isn't a worry right now.
+    //       Soon however this will be really important to me. For right now though it
+    //       isn't a huge problem...
+    switch (target.result.os.tag) {
+        .macos => {
+            module.linkFramework("Carbon", .{});
+            tests.linkFramework("Carbon");
+        },
+        .linux, .freebsd => {
+            // NOTE: To have support for both X11 and Wayland in the same binary
+            //       you must have both X11 and Wayland installed on your system.
+            //       Alternativly you may use either:
+            //       `` or ``
+            //       Disable compiling with one or the other
+
+            module.linkSystemLibrary("wayland-client", .{});
+            tests.linkSystemLibrary("wayland-client");
+
+            module.linkSystemLibrary("xdo", .{});
+            tests.linkSystemLibrary("xdo");
+        },
+        else => {},
+    }
 }
