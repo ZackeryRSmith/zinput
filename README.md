@@ -15,7 +15,7 @@
 * Runs in userspace
   - Extra system permisions are not required
 * Fast (low-latency)
-* ~~Thread safe~~ (See FILL ME IN WITH ISSUE TRACKER)
+* Thread safe
 
 
 # How to Use
